@@ -1,2 +1,7 @@
-# wtmm
-Wavelet Transform Modulus Maxima
+# Wavelet Transform Modulus Maxima
+
+Dependencies:
+- numpy
+- scipy
+- matplotlib (optional)
+- pywt
