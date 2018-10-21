@@ -46,15 +46,18 @@ def equal_pt_indices(l1, l2, reverse=False):
 
 
 class Bifurcation:
+
     def __init__(self, points):
+        """
+        Bifurcation object defines bifurcation. It also offers some methods that can describe the bifurcations well,
+        e.g. Strahler number that describes branching.
+        :param points:
+        """
         if not isinstance(points, list):
             raise ValueError('Init bifurcation with ', type(points))
         # points are sorted from the biggest scale
         if np.any((np.diff([p[0] for p in points]) > 0)):
             raise Exception('Rows must be in decreasing order, but they are: ', points)
-
-        if len(points) > 200:
-            raise ValueError('Not even in the worst case should length be so big: ', len(points))
 
         self.points = points
         self.children = []
@@ -177,8 +180,6 @@ class Bifurcation:
             print('a_half: ', a_half)
             print('a_qrt: ', a_qrt)
         all_points = self.get_points()
-        #if verbose:
-        #    print('all_points ', all_points)
         points_at_half = [(a, b) for a, b in all_points if a == a_half]
         points_at_qrt = [(a, b) for a, b in all_points if a == a_qrt]
         n_at_half = len(points_at_half)
@@ -190,7 +191,6 @@ class Bifurcation:
         if n_at_qrt < n_at_half or n_at_half < 1:
             raise AssertionError
         return n_at_half, n_at_qrt
-
 
     @staticmethod
     def merge(bif1, bif2):
@@ -356,16 +356,14 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
     """
     Skeleton Constructor
 
-    The basic ideas is to scan the coefficient matrix from max_row to 0 looking for non-zero elements. It assumes that
-    the matrix has already been cleaned of everything that is not a local maxima. I generally use order=1 for this
-
-    Warning: Has side-effects. To simplify the algorithm, any point consumed by this function will be zeroed out
+    The basic ideas is to scan the coefficient matrix from row 0 to row n-1 looking for non-zero elements. It assumes
+    that the matrix has already been cleaned of everything that is not a local maxima. I generally use order=1 for this.
 
     :param input_mtx: WTMM mask
-    :param proximity: how near by a non-zero point to look for the next non-zero point to jump to
+    :param proximity: how near by a non-zero point to look for the next non-zero point to jump to.
     :param plot: plot the skeleton that is constructed
     :param scales: list of scales. Here used ONLY because of plotting.
-    proximity: defines region around the matrix
+    :returns list of bifurcation objects after merging
     """
     # to avoid side-effect, we will work on the matrix copy
     mtx = input_mtx.copy()
@@ -413,21 +411,6 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
             new_value.sort(key=lambda e: e[0], reverse=True)
             bifurcations[k] = new_value
 
-    # if plot:
-    #     plt.figure(figsize=(10, 8))
-    #     plt.title('Bifurcations before Merging')
-    #     for n, (k, v) in enumerate(bifurcations.items()):
-    #         rows, cols = zip(*v)
-    #         plt.plot(cols, rows, 'ko', alpha=0.1)
-    #
-    #     if not np.all(np.diff(scales) == 1):
-    #         scales_str = ['%.2f' % sc for sc in scales]
-    #         plt.yticks(range(mtx.shape[0]), scales_str)
-    #     ax = plt.gca()
-    #     ax.set_ylim(ax.get_ylim()[::-1])
-    #     ax.xaxis.tick_top()
-    #     plt.show()
-
     assert len(bifurcations) > 0
 
     bif_objects = []
@@ -458,8 +441,7 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
             points = bif.get_points()
             rows, cols = zip(*points)
             plt.plot(cols, rows, 'o', color= colors[n % len(colors)], alpha=0.9)
-            print(bif.get_strahler_nr())
-            #print()
+            #print(bif.get_strahler_nr())
             # break
 
         if not np.all(np.diff(scales) == 1):
@@ -470,6 +452,7 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
         ax.xaxis.tick_top()
         plt.xlabel('Dilation b')
         plt.ylabel('Scale a')
+        plt.title('Bifurcations')
         plt.show()
 
     final_list.sort(key=lambda x: x.points[0][0], reverse=True)

@@ -7,9 +7,12 @@ from .mytracing import skeletor
 
 PYWT_FIXED = True
 if PYWT_FIXED:
+    # if pywt library is changed to have trimmed wavelet functions, their support is from -1 to 1 exactly
     GAUS1_SUPPORT = 1
     GAUS2_SUPPORT = 1
 else:
+    # otherwise, the support is different for various wavelet base functions and is approximated by following number
+    # NOTE: these are not exact and probably wrong.
     GAUS1_SUPPORT = 2.45
     GAUS2_SUPPORT = 2.68
 
@@ -96,7 +99,7 @@ def wtmm(sig, scales=None, wavelet=None, remove_inf=False, epsilon=0.1,
 
     # wtmm_matr = np.abs(wtmm_matr)
 
-    # normalize the rows to sum up to 1
+    # normalize the rows to sum up to 1. Needed ONLY for some specific algorithms.
     normalize_rows = False
     if normalize_rows:
         row_sums = wtmm_matr.sum(axis=1)
@@ -164,6 +167,7 @@ def perform_cwt(sig, scales, wavelet, epsilon=0.1, order=1, plot=False, remove_i
         ax.xaxis.tick_top()
         plt.xlabel('Dilation b')
         plt.ylabel('Scale a')
+        plt.title('WTMM mask')
         plt.show()
 
     return mask, w_coefs

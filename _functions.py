@@ -26,6 +26,24 @@ _DEPRECATION_MSG = ("`{old}` has been renamed to `{new}` and will "
                     "be removed in a future version of pywt.")
 
 
+def trim_wavelet(x, psi, tol=1e-2):
+    """
+    Adjustment to the original pywt library. It trims the wavelet function to be from -1 to 1.
+    :param x: x
+    :param psi: psi(x)
+    :param tol: allowed maximal absolute value of psi(-1) and psi(1).
+    :return: trimmed wavelet: x, psi(x)
+    """
+    if len(x) != len(psi):
+        raise ValueError('Lengths do not match: {}, {}'.format(len(x), len(psi)))
+    l = np.argmax(np.abs(psi)>tol)
+    r = len(x) - np.argmax(np.abs(psi[::-1])>tol) - 1
+    x = x[l:r]
+    psi = psi[l:r]
+    x = x / x[-1]
+    return x, psi
+
+
 def _integrate(arr, step):
     integral = np.cumsum(arr)
     integral *= step
@@ -106,13 +124,7 @@ def integrate_wavelet(wavelet, precision=8):
     if len(functions_approximations) == 2:      # continuous wavelet
         psi, x = functions_approximations
         # ############################ I added this Code: ############################
-        tol = 1e-2
-        l = np.argmax(np.abs(psi)>tol)
-        r = len(x) - np.argmax(np.abs(psi[::-1])>tol) - 1
-        #print(len(x_1),l,r)
-        x = x[l:r]
-        psi = psi[l:r]
-        x = x / x[-1]
+        x, psi + trim_wavelet(x, psi)
         # ############################ Up to here ####################################
         step = x[1] - x[0]
         return _integrate(psi, step), x
