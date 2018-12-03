@@ -124,7 +124,7 @@ def integrate_wavelet(wavelet, precision=8):
     if len(functions_approximations) == 2:      # continuous wavelet
         psi, x = functions_approximations
         # ############################ I added this Code: ############################
-        x, psi + trim_wavelet(x, psi)
+        x, psi = trim_wavelet(x, psi)
         # ############################ Up to here ####################################
         step = x[1] - x[0]
         return _integrate(psi, step), x
