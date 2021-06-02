@@ -2,11 +2,6 @@
 
 This library implements Wavelet Transform Modulus Maxima (WTMM) on top of PyWavelets (pywt)
 
-Dependencies:
-- numpy
-- scipy
-- matplotlib (optional)
-- pywt (PyWavelets)
 
 Files:
  - `cwt.py` does Continous Wavelet Transform and contains main function `wtmm()` that runs Wavelet Transform Modulus Maxima
