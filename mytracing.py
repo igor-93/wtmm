@@ -47,11 +47,12 @@ def equal_pt_indices(l1, l2, reverse=False):
 
 class Bifurcation:
 
-    def __init__(self, points):
+    def __init__(self, points, scales):
         """
         Bifurcation object defines bifurcation. It also offers some methods that can describe the bifurcations well,
         e.g. Strahler number that describes branching.
         :param points:
+        :param scales used to convert from matrix space to scale-time space (i.e. to convert 1st dim to scales)
         """
         if not isinstance(points, list):
             raise ValueError('Init bifurcation with ', type(points))
@@ -61,6 +62,10 @@ class Bifurcation:
 
         self.points = points
         self.children = []
+
+        if np.any((np.diff(scales) < 0)):
+            raise Exception('Scales must be in ascending order, but they are: ', scales)
+        self.scales = scales
 
     def __str__(self):
         parent = ', '.join(map(str, self.points[:3])) + '\n'
@@ -82,7 +87,20 @@ class Bifurcation:
     def is_merged(self):
         return len(self.children) > 0
 
+    def get_height(self):
+        # max height, starting from 0 always
+        return self.points[0][0]
+
+    def get_max_scale(self):
+        # max scale a
+        return self.scales[self.get_height()]
+
     def get_b(self, a):
+        """Return right-most time-point b for given scale a
+
+        :param a: scale at which to look for right-most time-point
+        :return: right-most time-point at scale a
+        """
         if self.points[-1][0] > a:
             return self.children[-1].get_b(a)
         else:
@@ -202,6 +220,9 @@ class Bifurcation:
         bif1 = copy.deepcopy(bif1)
         bif2 = copy.deepcopy(bif2)
 
+        assert (bif1.scales == bif2.scales).all()
+        scales = bif1.scales
+
         assert not bif2.is_merged()
 
         ind1, ind2 = equal_pt_indices(bif1.points, bif2.points, reverse=True)
@@ -230,7 +251,7 @@ class Bifurcation:
                 print(bif2.points)
                 raise AssertionError('The separated lines have the same column, bt it must be different.')
 
-            new_bif = Bifurcation(common_points)
+            new_bif = Bifurcation(common_points, scales=scales)
             #new_bif.children.append(left)
             #new_bif.children.append(right)
             new_bif.add_child(left)
@@ -250,7 +271,7 @@ class Bifurcation:
                 return True, bif1
             else:
                 # print('This might be a special case with multi branching')
-                third_child = Bifurcation(bif2.points[ind2 + 1:])
+                third_child = Bifurcation(bif2.points[ind2 + 1:], scales)
                 #bif1.children.append(third_child)
                 bif1.add_child(third_child)
                 return True, bif1
@@ -258,6 +279,11 @@ class Bifurcation:
         else:
             # print('Case 3: merging not possible')
             return False, None
+
+
+def sort_bifurcations_from_left_to_right(lst):
+    newlist = sorted(lst, key=lambda x: x.get_right_edge())
+    return newlist
 
 
 def best_direction(hood, center_col):
@@ -380,7 +406,17 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
     bi_cnt = 0
 
     # local maxima at the lowest scale
-    maxs = signal.argrelmax(mtx[0])[0]
+    starting_scale = 0
+    maxs = signal.argrelmax(mtx[starting_scale])[0]
+
+    while len(maxs) == 0:
+        assert (mtx[starting_scale] == 0.0).all(), f"Non-zeros found, but no local maxima {mtx[starting_scale]}"
+        starting_scale += 1
+        maxs = signal.argrelmax(mtx[starting_scale])[0]
+
+    if starting_scale == 5:
+        print(f"No local minima found at first {starting_scale} scales...")
+        raise ValueError(f"Starting at the {starting_scale}-th scale is too far... Limit is the 5th scale")
 
     for start_pt in maxs:
         continuous, bifurc_path = walk_bifurcation(mtx, start_col=start_pt, proximity=proximity)
@@ -391,6 +427,9 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
             bi_cnt += 1
         elif bifurc_path:
             invalids[bifurc_path[-1]] = bifurc_path
+
+    if len(bifurcations) == 0:
+        raise ValueError(f"No continuous bifurcations found. Try to increase the proximity")
 
     # interpolate the ridge lines (i.e. fill the missing values). The path gets reversed here.
     for k, v in bifurcations.items():
@@ -415,7 +454,7 @@ def skeletor(input_mtx, proximity=9, plot=False, scales=None):
 
     bif_objects = []
     for k, v in bifurcations.items():
-        bif_objects.append(Bifurcation(v))
+        bif_objects.append(Bifurcation(v, scales))
 
     # connect the ridge lines that have common points
     bif_objects.sort(key=lambda x: x.points[-1][1])
