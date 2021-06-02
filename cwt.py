@@ -30,7 +30,7 @@ def get_max_scale(signal_length):
     return int(np.floor(signal_length/(2*MAX_SUPPORT)))
 
 
-def create_w_coef_mask(w_coefs, order=1, epsilon=0.1, remove_inf=False):
+def create_w_coef_mask(w_coefs, order, epsilon=0.1, remove_inf=False):
     """
     Create a new matrix, the same shape as the wavelet coefficient one, but with zeros everywhere except for local
     maxima's. Epsilon here is used for ranking the strength of the local maxima.
@@ -100,16 +100,16 @@ def wtmm(sig, scales=None, wavelet=None, remove_inf=False, epsilon=0.1,
     # wtmm_matr = np.abs(wtmm_matr)
 
     # normalize the rows to sum up to 1. Needed ONLY for some specific algorithms.
-    normalize_rows = False
-    if normalize_rows:
-        row_sums = wtmm_matr.sum(axis=1)
-        assert len(row_sums) == mask.shape[0]
-        wtmm_matr = wtmm_matr / row_sums[:, np.newaxis]
-
-        if 0 in row_sums:
-            max_scale_found = np.where(row_sums == 0)[0][0]
-            print('max_scale_found: ', max_scale_found-1)
-            wtmm_matr = wtmm_matr[:max_scale_found]
+    # normalize_rows = False
+    # if normalize_rows:
+    #     row_sums = wtmm_matr.sum(axis=1)
+    #     assert len(row_sums) == mask.shape[0]
+    #     wtmm_matr = wtmm_matr / row_sums[:, np.newaxis]
+    #
+    #     if 0 in row_sums:
+    #         max_scale_found = np.where(row_sums == 0)[0][0]
+    #         print('max_scale_found: ', max_scale_found-1)
+    #         wtmm_matr = wtmm_matr[:max_scale_found]
 
     return wtmm_matr, w_coef, bifurcations
 
@@ -148,7 +148,8 @@ def perform_cwt(sig, scales, wavelet, epsilon=0.1, order=1, plot=False, remove_i
     # Create the mask, keeping only the maxima
     # Here we use log values because for the very small scales, WT values are all so small that
     # it is impossible to distinguish local maxima
-    mask = create_w_coef_mask(np.abs(np.log(np.abs(w_coefs))), order=order, epsilon=epsilon, remove_inf=remove_inf)
+    mask = create_w_coef_mask(np.abs(w_coefs)*1000.0, order=order, epsilon=epsilon, remove_inf=remove_inf)
+    # mask = create_w_coef_mask(np.abs(np.log(np.abs(w_coefs))), order=order, epsilon=epsilon, remove_inf=remove_inf)
 
     # set non-valid WT values to 0
     mask = clear_edges(mask, scales=scales, wavelet=wavelet)
